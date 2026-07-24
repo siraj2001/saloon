@@ -37,7 +37,7 @@ export default function RevenueChart() {
           <Tooltip 
             cursor={{ fill: '#f9fafb' }}
             contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-            formatter={(value: number) => [`₹${value}`, 'Revenue']}
+            formatter={(value: any) => [`₹${value}`, 'Revenue']}
           />
           <Bar dataKey="revenue" fill="var(--color-brand-gold)" radius={[4, 4, 0, 0]} maxBarSize={50} />
         </BarChart>
