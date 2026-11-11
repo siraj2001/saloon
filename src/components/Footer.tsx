@@ -1,92 +1,214 @@
 import Link from "next/link";
-import { MapPin, Phone, Mail } from "lucide-react";
+import { MapPin, Phone, Mail, Clock, ExternalLink, Calendar, MessageCircle, ArrowUpRight, Star } from "lucide-react";
+import BrandLogo from "@/components/BrandLogo";
+import { SALON_INFO } from "@/lib/constants";
 
 export default function Footer() {
+  const currentYear = new Date().getFullYear();
+
   return (
-    <footer className="bg-zinc-950 text-white pt-20 pb-10 border-t border-zinc-900">
-      <div className="max-w-[90rem] mx-auto px-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-6 xl:gap-12 mb-16">
-        
-        {/* Brand */}
-        <div className="lg:col-span-3">
-          <h3 className="text-2xl font-bold font-serif mb-6 tracking-widest">
-            MALIK <span className="text-[var(--color-brand-gold)]">Hair Point</span>
-          </h3>
-          <p className="text-gray-400 mb-6 leading-relaxed">
-            Style. Confidence. Perfection. Experience premium grooming and beauty services.
-          </p>
-          <div className="flex gap-4">
-            <a href="#" className="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center hover:bg-[var(--color-brand-gold)] hover:text-black transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect width="20" height="20" x="2" y="2" rx="5" ry="5"/>
-                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
-                <line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/>
-              </svg>
-            </a>
+    <footer className="bg-[#050507] text-[#F5EFEB] border-t border-[#C8A97E]/10 pt-20 sm:pt-28 md:pt-36 pb-12 sm:pb-16">
+      <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-16">
+        {/* Main Footer Grid with Generous Gaps */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-16 pb-16 border-b border-[#181820]">
+          {/* Col 1: Brand & Manifesto (4 cols) */}
+          <div className="lg:col-span-4 flex flex-col justify-between">
+            <div>
+              <div className="mb-8">
+                <BrandLogo size="lg" variant="gold" />
+              </div>
+
+              <p className="text-sm text-[#9E9991] font-light leading-[1.85] mb-8 max-w-sm">
+                Chennai&apos;s sanctuary for the modern gentleman. Delivering precision haircuts, architectural beard grooming, and restorative rituals with 3+ years of dedicated mastery.
+              </p>
+
+              <a
+                href={SALON_INFO.directionsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2.5 px-4 py-2 bg-[#0E0E12] border border-[#C8A97E]/15 text-xs text-[#DFB982] hover:border-[#DFB982]/50 transition-colors group"
+                aria-label="Google Rating: 5.0 out of 5 stars with 39 reviews"
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className="font-semibold text-sm">5.0</span>
+                  <div className="flex text-[#DFB982]">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} size={11} className="fill-[#DFB982] text-[#DFB982]" />
+                    ))}
+                  </div>
+                </div>
+                <span className="text-[#6B6760]">|</span>
+                <span className="text-[#E8DFD5]/80 group-hover:text-[#F5EFEB]">(39) Reviews · Hairdresser</span>
+              </a>
+            </div>
+
+            <div className="mt-10">
+              <Link
+                href="/book"
+                className="inline-flex items-center gap-2 px-7 py-3.5 bg-[#C8A97E] hover:bg-[#DFB982] text-[#080809] text-xs font-semibold uppercase tracking-[0.2em] transition-colors"
+              >
+                <Calendar size={13} />
+                <span>Reserve An Appointment</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Col 2: Navigation Links (2 cols) */}
+          <div className="lg:col-span-2">
+            <h4 className="text-[10px] uppercase tracking-[0.3em] font-medium text-[#DFB982] mb-8">
+              Directory
+            </h4>
+            <ul className="space-y-4 text-xs tracking-[0.18em] uppercase">
+              <li>
+                <Link href="/" className="text-[#9E9991] hover:text-[#DFB982] transition-colors">
+                  Home
+                </Link>
+              </li>
+              <li>
+                <Link href="/services" className="text-[#9E9991] hover:text-[#DFB982] transition-colors">
+                  Services & Pricing
+                </Link>
+              </li>
+              <li>
+                <Link href="/about" className="text-[#9E9991] hover:text-[#DFB982] transition-colors">
+                  About Atelier
+                </Link>
+              </li>
+              <li>
+                <Link href="/gallery" className="text-[#9E9991] hover:text-[#DFB982] transition-colors">
+                  Lookbook Gallery
+                </Link>
+              </li>
+              <li>
+                <Link href="/book" className="text-[#DFB982] flex items-center gap-1">
+                  Book Appointment <ArrowUpRight size={12} />
+                </Link>
+              </li>
+              <li>
+                <Link href="/contact" className="text-[#9E9991] hover:text-[#DFB982] transition-colors">
+                  Contact & Location
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Col 3: Popular Combos (3 cols) */}
+          <div className="lg:col-span-3">
+            <h4 className="text-[10px] uppercase tracking-[0.3em] font-medium text-[#DFB982] mb-8">
+              Popular Combos
+            </h4>
+            <ul className="space-y-4 text-xs text-[#9E9991] font-light">
+              <li className="flex justify-between border-b border-[#14141A] pb-3">
+                <span>Hair Cut & Precision Trim</span>
+                <span className="text-[#DFB982] font-mono">₹120 / ₹80</span>
+              </li>
+              <li className="flex justify-between border-b border-[#14141A] pb-3">
+                <span>Combo 1 (Haircut + Shave + D-Tan)</span>
+                <span className="text-[#DFB982] font-mono">₹399</span>
+              </li>
+              <li className="flex justify-between border-b border-[#14141A] pb-3">
+                <span>Combo 3 (Head Massage + D-Tan)</span>
+                <span className="text-[#DFB982] font-mono">₹599</span>
+              </li>
+              <li className="flex justify-between border-b border-[#14141A] pb-3">
+                <span>Combo 10 (Ammonia-Free Color)</span>
+                <span className="text-[#DFB982] font-mono">₹1,099</span>
+              </li>
+              <li className="flex justify-between pb-1">
+                <span>Combo 15 (Sovereign Gold Facial)</span>
+                <span className="text-[#DFB982] font-mono">₹1,999</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* Col 4: Contact & Hours (3 cols) */}
+          <div className="lg:col-span-3">
+            <h4 className="text-[10px] uppercase tracking-[0.3em] font-medium text-[#DFB982] mb-8">
+              Visit The Atelier
+            </h4>
+            <div className="space-y-5 text-xs text-[#9E9991] font-light leading-[1.8]">
+              <div className="flex items-start gap-3">
+                <MapPin size={15} className="text-[#DFB982] shrink-0 mt-1" />
+                <span>{SALON_INFO.address}</span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Phone size={14} className="text-[#DFB982] shrink-0" />
+                <a href={`tel:${SALON_INFO.phone}`} className="hover:text-[#DFB982] transition-colors font-mono">
+                  {SALON_INFO.phoneDisplay}
+                </a>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <MessageCircle size={14} className="text-emerald-400 shrink-0" />
+                <a
+                  href={`https://wa.me/${SALON_INFO.whatsappNumber}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-emerald-300 text-emerald-400 transition-colors font-mono"
+                >
+                  WhatsApp: +91 63984 74536
+                </a>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Mail size={14} className="text-[#DFB982] shrink-0" />
+                <a href={`mailto:${SALON_INFO.email}`} className="hover:text-[#DFB982] transition-colors">
+                  {SALON_INFO.email}
+                </a>
+              </div>
+
+              <div className="pt-3 border-t border-[#14141A] flex items-start gap-3">
+                <Clock size={14} className="text-[#DFB982] shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-[#F5EFEB]">Mon – Sat: 9:00 AM – 8:00 PM</p>
+                  <p className="text-[#7A766F]">Sun: 10:00 AM – 2:00 PM (Appointments)</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Quick Links */}
-        <div className="lg:col-span-2">
-          <h4 className="text-xl font-serif font-semibold mb-6">Quick Links</h4>
-          <ul className="space-y-4">
-            <li><Link href="/" className="text-gray-400 hover:text-[var(--color-brand-gold)] transition-colors">Home</Link></li>
-            <li><Link href="/services" className="text-gray-400 hover:text-[var(--color-brand-gold)] transition-colors">Services</Link></li>
-            <li><Link href="/about" className="text-gray-400 hover:text-[var(--color-brand-gold)] transition-colors">About Us</Link></li>
-            <li><Link href="/gallery" className="text-gray-400 hover:text-[var(--color-brand-gold)] transition-colors">Gallery</Link></li>
-            <li><Link href="/book" className="text-[var(--color-brand-gold)] font-medium">Book Appointment</Link></li>
-          </ul>
+        {/* Directions Strip with Comfortable Padding */}
+        <div className="my-12 p-6 sm:p-8 bg-[#0A0A0D] border border-[#C8A97E]/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="flex items-center gap-4 text-xs text-[#E8DFD5]">
+            <div className="w-9 h-9 border border-[#C8A97E]/20 flex items-center justify-center shrink-0 text-[#DFB982]">
+              <MapPin size={16} />
+            </div>
+            <div>
+              <p className="font-normal text-sm">Located in Urapakkam, Chennai</p>
+              <p className="text-[#7A766F] text-xs mt-0.5">Minutes from GST Road & Urapakkam Railway Station</p>
+            </div>
+          </div>
+
+          <a
+            href={SALON_INFO.directionsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-6 py-3 border border-[#C8A97E]/30 text-[#DFB982] text-xs font-semibold uppercase tracking-[0.2em] hover:border-[#DFB982] transition-colors"
+          >
+            <span>Navigate in Google Maps</span>
+            <ExternalLink size={12} />
+          </a>
         </div>
 
-        {/* Services */}
-        <div className="lg:col-span-2">
-          <h4 className="text-xl font-serif font-semibold mb-6">Our Services</h4>
-          <ul className="space-y-4">
-            <li className="text-gray-400">Hair Styling</li>
-            <li className="text-gray-400">Beard Grooming</li>
-            <li className="text-gray-400">Hair Coloring</li>
-            <li className="text-gray-400">Keratin Treatment</li>
-            <li className="text-gray-400">Facial & Cleanup</li>
-          </ul>
-        </div>
+        {/* Bottom Credits & Legal */}
+        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#5A5752] font-light">
+          <p>© {currentYear} MALIK HAIR SALOON (Malik Men&apos;s Hair Point). All rights reserved.</p>
 
-        {/* Contact */}
-        <div className="lg:col-span-3">
-          <h4 className="text-xl font-serif font-semibold mb-6">Contact Us</h4>
-          <ul className="space-y-4">
-            <li className="flex items-start gap-3 text-gray-400">
-              <MapPin className="text-[var(--color-brand-gold)] shrink-0 mt-1" size={20} />
-              <span>90 Mg nagar part 2, Kalidsan street, west, Urapakkam, Chennai, Tamil Nadu 603211</span>
-            </li>
-            <li className="flex items-center gap-3 text-gray-400">
-              <Phone className="text-[var(--color-brand-gold)] shrink-0" size={20} />
-              <span>06398474536</span>
-            </li>
-            <li className="flex items-center gap-3 text-gray-400">
-              <Mail className="text-[var(--color-brand-gold)] shrink-0" size={20} />
-              <span>info@malikhairpoint.com</span>
-            </li>
-          </ul>
+          <p className="flex items-center gap-1.5">
+            <span>Crafted by</span>
+            <a
+              href={SALON_INFO.developer.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#9E9991] font-normal hover:text-[#DFB982] transition-colors underline underline-offset-4"
+            >
+              {SALON_INFO.developer.name}
+            </a>
+            <span className="text-[#5A5752]">({SALON_INFO.developer.phone})</span>
+          </p>
         </div>
-
-        {/* Location Map */}
-        <div className="lg:col-span-2 rounded-xl overflow-hidden h-48 lg:h-full min-h-[200px] border border-zinc-800 shadow-lg">
-          <iframe 
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3889.6551824697967!2d80.06107227320747!3d12.865533817198664!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a52f7c883401cdf%3A0x48f8712960d39a1a!2sMalik%20men&#39;s%20hair%20point!5e0!3m2!1sen!2sin!4v1784912811970!5m2!1sen!2sin" 
-            width="100%" 
-            height="100%" 
-            style={{ border: 0, minHeight: "200px" }} 
-            allowFullScreen={false} 
-            loading="lazy" 
-            referrerPolicy="no-referrer-when-downgrade"
-          ></iframe>
-        </div>
-      </div>
-
-      <div className="max-w-[90rem] mx-auto px-6 pt-8 border-t border-zinc-900 text-center text-gray-500 text-sm flex flex-col items-center gap-2">
-        <p>&copy; {new Date().getFullYear()} MALIK Hair Point. All rights reserved.</p>
-        <p>
-          Built by <a href="https://sirajksportfolio.netlify.app/" target="_blank" rel="noopener noreferrer" className="text-white font-medium hover:text-[var(--color-brand-gold)] transition-colors underline underline-offset-4">buildwithsiraj</a> (9176619665)
-        </p>
       </div>
     </footer>
   );

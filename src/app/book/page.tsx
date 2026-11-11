@@ -1,9 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { CheckCircle2, ChevronRight, Calendar as CalendarIcon, Clock, User, Scissors } from "lucide-react";
+import {
+  CheckCircle2,
+  ChevronRight,
+  ChevronLeft,
+  Calendar as CalendarIcon,
+  Clock,
+  User,
+  Scissors,
+  Star,
+  MessageCircle,
+  ShieldCheck,
+  X
+} from "lucide-react";
+import { SERVICES, STYLISTS, SALON_INFO } from "@/lib/constants";
 
 type BookingData = {
   service: string;
@@ -18,280 +33,724 @@ type BookingData = {
   };
 };
 
-export default function BookPage() {
+const emptySubscribe = () => () => {};
+function useIsClient() {
+  return useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
+}
+
+function BookingContent() {
+  const searchParams = useSearchParams();
+  const preselectedService = searchParams.get("service") || "";
+  const preselectedStylist = searchParams.get("stylist") || "";
+
   const [step, setStep] = useState(1);
-  const [isClient, setIsClient] = useState(false);
+  const isClient = useIsClient();
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmationPopup, setShowConfirmationPopup] = useState(false);
+  const [whatsappShareUrl, setWhatsappShareUrl] = useState("");
+
   const [bookingData, setBookingData] = useState<BookingData>({
-    service: "",
-    stylist: "",
+    service: preselectedService,
+    stylist: preselectedStylist,
     date: "",
-    time: "",
-    customerDetails: { name: "", phone: "", email: "", notes: "" }
+    time: "11:00 AM",
+    customerDetails: { name: "", phone: "", email: "", notes: "" },
   });
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
+  const [prevParams, setPrevParams] = useState({ service: preselectedService, stylist: preselectedStylist });
+  if (prevParams.service !== preselectedService || prevParams.stylist !== preselectedStylist) {
+    setPrevParams({ service: preselectedService, stylist: preselectedStylist });
+    setBookingData((prev) => ({
+      ...prev,
+      service: preselectedService || prev.service,
+      stylist: preselectedStylist || prev.stylist,
+    }));
+  }
 
-  const services = [
-    "Hair Cut - ₹120", 
-    "Beard Trim - ₹80", 
-    "Combo 1 (Hair Cut + Shave + D.tan) - ₹399",
-    "Combo 2 (Hair Cut + Shave + color + face cleansing) - ₹499",
-    "Combo 3 (Hair Cut + Shave + D.tan + head massage) - ₹599",
-    "Combo 4 (Hair Cut + Shave + hair spa + face cleansing) - ₹599",
-    "Combo 5 (Hair Cut + Shave + color + D.tan) - ₹699",
-    "Combo 6 (Hair Cut + Shave + advance fruit facial) - ₹699",
-    "Combo 7 (Hair Cut + Shave + hair spa + D.tan) - ₹799",
-    "Combo 8 (Hair Cut + Shave + D.tan + advance fruit facial) - ₹899",
-    "Combo 9 (Hair Cut + Shave + papaya facial + D.tan) - ₹999",
-    "Combo 10 (Hair Cut + Shave + D.tan + amonia free hair) - ₹1099",
-    "Combo 11 (Hair Cut + Shave + D.tan + fruit facial + color) - ₹1199",
-    "Combo 12 (Hair Cut + Shave + papaya facial + advance hair spa) - ₹1299",
-    "Combo 13 (Hair Cut + Shave + advance hair spa + Gold peel of mask) - ₹1599",
-    "Combo 14 (Hair Cut + Shave + D.tan + advance hair spa + Gold facial) - ₹1799",
-    "Combo 15 (Hair Cut + Shave + D.tan + Loreal amonia free hair + Gold facial) - ₹1999"
+  const timeSlots = [
+    { period: "Morning", slots: ["09:30 AM", "10:15 AM", "11:00 AM", "11:45 AM"] },
+    { period: "Afternoon", slots: ["12:30 PM", "01:15 PM", "02:30 PM", "03:15 PM"] },
+    { period: "Evening", slots: ["04:00 PM", "04:45 PM", "05:30 PM", "06:15 PM", "07:00 PM"] },
   ];
-  const stylists = [
-    { 
-      name: "Mustafah", 
-      role: "Master Stylist",
-      brief: "Over 15 years of experience crafting signature looks."
-    },
-    { 
-      name: "Farooq", 
-      role: "Color Expert",
-      brief: "Specializes in creative coloring and advanced hair spa treatments."
-    },
-    { 
-      name: "Malik 3", 
-      role: "Senior Barber",
-      brief: "Master of classic fades and luxury hot towel shaves."
-    }
-  ];
-  const timeSlots = ["10:00 AM", "11:00 AM", "12:30 PM", "2:00 PM", "3:30 PM", "5:00 PM"];
 
-  const handleNext = () => setStep(step + 1);
-  const handlePrev = () => setStep(step - 1);
+  const handleNext = () => setStep((prev) => prev + 1);
+  const handlePrev = () => setStep((prev) => prev - 1);
 
   const confirmBooking = () => {
-    // Save to local storage
-    const existingBookings = JSON.parse(localStorage.getItem("malik_bookings") || "[]");
-    const newBooking = { ...bookingData, id: Date.now().toString(), status: "Confirmed" };
-    localStorage.setItem("malik_bookings", JSON.stringify([...existingBookings, newBooking]));
-    setStep(7); // Success step
+    setIsSubmitting(true);
+    const bookingId = "MB-" + Date.now().toString().slice(-6);
+
+    const message = `*New Appointment Request* ✂️
+━━━━━━━━━━━━━━━━━━━
+*Booking ID:* ${bookingId}
+*Salon:* MALIK Hair Saloon, Chennai
+
+*Service:* ${bookingData.service}
+*Barber:* ${bookingData.stylist || "First Available Master Barber"}
+*Date:* ${bookingData.date}
+*Time Slot:* ${bookingData.time}
+
+*Client Particulars:*
+*Name:* ${bookingData.customerDetails.name}
+*Phone:* ${bookingData.customerDetails.phone}
+*Email:* ${bookingData.customerDetails.email || "N/A"}
+*Notes:* ${bookingData.customerDetails.notes || "None"}
+━━━━━━━━━━━━━━━━━━━
+Please confirm my appointment.`;
+
+    const newBooking = {
+      ...bookingData,
+      id: bookingId,
+      status: "Pending Confirmation",
+    };
+
+    // 1. Immediately dispatch to WhatsApp synchronously from click event
+    const whatsappUrl = `https://wa.me/${SALON_INFO.whatsappNumber}?text=${encodeURIComponent(message)}`;
+    setWhatsappShareUrl(whatsappUrl);
+    window.open(whatsappUrl, "_blank");
+
+    // 2. Local Storage Persistence
+    try {
+      const existingBookings = JSON.parse(localStorage.getItem("malik_bookings") || "[]");
+      localStorage.setItem("malik_bookings", JSON.stringify([...existingBookings, newBooking]));
+    } catch (e) {
+      console.error("Local storage error", e);
+    }
+
+    // 3. Google Sheets Backend Integration (non-blocking background sync)
+    fetch(
+      "https://script.google.com/macros/s/AKfycbxEJkZmtzAFTzECOQoBUgsxLjVxr9lEF5ythyNRtbBJ6MZYmQob7OV2EaexKoTXaPpUhg/exec",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8",
+        },
+        body: JSON.stringify({
+          id: newBooking.id,
+          customerName: newBooking.customerDetails.name,
+          phone: newBooking.customerDetails.phone,
+          email: newBooking.customerDetails.email,
+          service: newBooking.service,
+          stylist: newBooking.stylist,
+          date: `${newBooking.date} at ${newBooking.time}`,
+          status: newBooking.status,
+          sheetName: "Bookings",
+        }),
+      }
+    ).catch((error) => {
+      console.error("Failed to save booking to Google Sheets", error);
+    });
+
+    setIsSubmitting(false);
+    setShowConfirmationPopup(true);
+    setStep(6);
   };
 
   if (!isClient) return null;
 
+  const filteredServicesList = selectedCategory === "All"
+    ? SERVICES
+    : SERVICES.filter((s) => s.category === selectedCategory);
+
   return (
-    <>
-      <Navbar theme="light" />
-      <main className="pt-32 pb-24 min-h-screen bg-[var(--color-brand-gray)] text-black">
-        <div className="max-w-4xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold font-serif mb-4 text-black">Book Appointment</h1>
-            <p className="text-gray-600">Reserve your premium grooming session.</p>
+    <div className="max-w-4xl mx-auto px-4 sm:px-8 lg:px-12">
+      {/* Editorial Title */}
+      <div className="text-center mb-16 md:mb-20">
+        <span className="text-[10px] sm:text-xs uppercase tracking-[0.35em] font-medium text-[#DFB982] block mb-4">
+          Concierge Reservation
+        </span>
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-serif font-normal text-[#F5EFEB] tracking-tight mb-4">
+          Reserve Your <span className="italic text-[#DFB982]">Barber Chair</span>
+        </h1>
+        <p className="text-sm text-[#9E9991] font-light max-w-lg mx-auto leading-[1.8]">
+          Select your desired treatment, master barber, and preferred timing. Verified instantly via our WhatsApp concierge.
+        </p>
+      </div>
+
+      {/* Stepper with Generous Breathing Room */}
+      {step < 6 && (
+        <div className="mb-14 relative">
+          <div className="flex justify-between items-center relative z-10">
+            {[
+              { num: 1, label: "Service" },
+              { num: 2, label: "Barber" },
+              { num: 3, label: "Date & Time" },
+              { num: 4, label: "Particulars" },
+              { num: 5, label: "Summary" },
+            ].map((s) => {
+              const isPassed = step > s.num;
+              const isCurrent = step === s.num;
+              return (
+                <div key={s.num} className="flex flex-col items-center">
+                  <div
+                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-xs transition-all duration-300 border ${
+                      isCurrent
+                        ? "bg-[#C8A97E] border-[#DFB982] text-[#080809]"
+                        : isPassed
+                        ? "bg-[#181820] border-[#C8A97E]/60 text-[#DFB982]"
+                        : "bg-[#101015] border-[#222228] text-[#5A5752]"
+                    }`}
+                  >
+                    {isPassed ? <CheckCircle2 size={16} /> : s.num}
+                  </div>
+                  <span
+                    className={`text-[10px] uppercase tracking-wider mt-2.5 hidden sm:block ${
+                      isCurrent ? "text-[#DFB982] font-semibold" : "text-[#7A766F]"
+                    }`}
+                  >
+                    {s.label}
+                  </span>
+                </div>
+              );
+            })}
           </div>
+          {/* Subtle Track Bar */}
+          <div className="absolute top-4 sm:top-5 left-4 right-4 h-[1px] bg-[#222228] z-0">
+            <div
+              className="h-full bg-[#C8A97E] transition-all duration-500"
+              style={{ width: `${((step - 1) / 4) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
 
-          {/* Progress Bar */}
-          {step < 7 && (
-            <div className="flex justify-between items-center mb-12 relative">
-              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-gray-200 z-0"></div>
-              <div 
-                className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-[var(--color-brand-gold)] z-0 transition-all duration-300" 
-                style={{ width: `${((step - 1) / 5) * 100}%` }}
-              ></div>
-              
-              {[1, 2, 3, 4, 5, 6].map((num) => (
-                <div key={num} className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center font-bold border-4 ${
-                  step >= num ? "bg-[var(--color-brand-gold)] border-[var(--color-brand-gold)] text-black" : "bg-white border-gray-200 text-gray-400"
-                }`}>
-                  {num < step ? <CheckCircle2 size={20} /> : num}
-                </div>
-              ))}
+      {/* Spacious Main Booking Card */}
+      <div className="bg-[#101015] border border-[#C8A97E]/15 p-5 sm:p-10 lg:p-14">
+        {/* Step 1: Select Service */}
+        {step === 1 && (
+          <div className="animate-in fade-in duration-300">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-[#1E1E26] mb-6 sm:mb-8 gap-4">
+              <h2 className="text-xl sm:text-2xl font-serif font-normal text-[#F5EFEB] flex items-center gap-2.5 sm:gap-3">
+                <Scissors size={20} className="text-[#DFB982]" />
+                <span>Select Grooming Service</span>
+              </h2>
+
+              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-0">
+                {["All", "Individual", "Essentials", "Luxury"].map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`px-3 py-1.5 sm:px-3.5 sm:py-1.5 text-[10px] uppercase tracking-wider font-semibold transition-colors shrink-0 ${
+                      selectedCategory === cat
+                        ? "bg-[#C8A97E] text-[#080809]"
+                        : "bg-[#181820] text-[#9E9991] hover:text-[#F5EFEB]"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
             </div>
-          )}
 
-          {/* Steps */}
-          <div className="bg-white p-8 md:p-12 rounded-2xl shadow-xl border border-gray-100">
-            
-            {/* Step 1: Service */}
-            {step === 1 && (
-              <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-                <h2 className="text-2xl font-bold font-serif mb-6 flex items-center gap-3"><Scissors className="text-[var(--color-brand-gold)]" /> Select Service</h2>
-                <div className="space-y-4">
-                  {services.map((service, idx) => (
-                    <div 
-                      key={idx} 
-                      onClick={() => setBookingData({...bookingData, service})}
-                      className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                        bookingData.service === service ? "border-[var(--color-brand-gold)] bg-yellow-50/50" : "border-gray-100 hover:border-gray-300"
-                      }`}
-                    >
-                      <h3 className="font-bold text-lg">{service}</h3>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Step 2: Stylist */}
-            {step === 2 && (
-              <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-                <h2 className="text-2xl font-bold font-serif mb-6 flex items-center gap-3"><User className="text-[var(--color-brand-gold)]" /> Choose Stylist</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {stylists.map((stylist, idx) => (
-                    <div 
-                      key={idx} 
-                      onClick={() => setBookingData({...bookingData, stylist: stylist.name})}
-                      className={`p-6 text-center rounded-xl border-2 cursor-pointer transition-all ${
-                        bookingData.stylist === stylist.name ? "border-[var(--color-brand-gold)] bg-yellow-50/50" : "border-gray-100 hover:border-gray-300"
-                      }`}
-                    >
-                      <div className="relative w-24 h-24 rounded-full mx-auto mb-4 overflow-hidden border-2 border-[var(--color-brand-gold)] bg-gray-100 flex items-center justify-center">
-                        <User size={36} className="text-gray-400" />
+            <div className="space-y-3 sm:space-y-4 max-h-[480px] overflow-y-auto pr-1 sm:pr-2">
+              {filteredServicesList.map((service) => {
+                const serviceLabel = `${service.name} - ₹${service.price}`;
+                const isSelected = bookingData.service === serviceLabel;
+                return (
+                  <div
+                    key={service.id}
+                    onClick={() => setBookingData({ ...bookingData, service: serviceLabel })}
+                    className={`p-4 sm:p-6 border cursor-pointer transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-6 ${
+                      isSelected
+                        ? "bg-[#161620] border-[#C8A97E]"
+                        : "bg-[#121217] border-[#1E1E26] hover:border-[#C8A97E]/30"
+                    }`}
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2.5 sm:gap-3 mb-1">
+                        <span className="text-[10px] font-mono text-[#7A766F] uppercase">
+                          {service.id}
+                        </span>
+                        <h3 className="font-serif font-normal text-base sm:text-xl text-[#F5EFEB]">
+                          {service.name}
+                        </h3>
                       </div>
-                      <h3 className="font-bold text-xl mb-1">{stylist.name}</h3>
-                      <p className="text-[var(--color-brand-gold)] font-medium text-sm mb-3">{stylist.role}</p>
-                      <p className="text-gray-500 text-sm leading-relaxed">{stylist.brief}</p>
+                      <p className="text-xs text-[#9E9991] font-light line-clamp-1 mb-2">
+                        {service.description}
+                      </p>
+                      <div className="flex items-center gap-3 text-[11px] text-[#7A766F] font-mono">
+                        <span className="flex items-center gap-1">
+                          <Clock size={11} className="text-[#C8A97E]" /> {service.duration}
+                        </span>
+                        <span>•</span>
+                        <span className="text-[#DFB982] uppercase">{service.category}</span>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
 
-            {/* Step 3: Date */}
-            {step === 3 && (
-              <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-                <h2 className="text-2xl font-bold font-serif mb-6 flex items-center gap-3"><CalendarIcon className="text-[var(--color-brand-gold)]" /> Select Date</h2>
-                <input 
-                  type="date" 
-                  min={new Date().toISOString().split('T')[0]}
+                    <div className="flex sm:block items-center justify-between sm:text-right shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#1C1C24]">
+                      <span className="text-[10px] sm:hidden uppercase tracking-wider text-[#7A766F] font-mono">Price</span>
+                      <span className="font-serif text-xl sm:text-2xl font-normal text-[#DFB982]">
+                        ₹{service.price}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: Choose Stylist */}
+        {step === 2 && (
+          <div className="animate-in fade-in duration-300">
+            <h2 className="text-2xl font-serif font-normal text-[#F5EFEB] mb-2 flex items-center gap-3">
+              <User size={20} className="text-[#DFB982]" />
+              <span>Select Master Barber</span>
+            </h2>
+            <p className="text-xs text-[#9E9991] mb-8 font-light">
+              Choose your preferred craftsman or select First Available for priority scheduling.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {/* Option: Any Master Barber */}
+              <div
+                onClick={() => setBookingData({ ...bookingData, stylist: "Any Available Master Barber" })}
+                className={`p-8 border cursor-pointer transition-all flex flex-col justify-between ${
+                  bookingData.stylist === "Any Available Master Barber"
+                    ? "bg-[#161620] border-[#C8A97E]"
+                    : "bg-[#121217] border-[#1E1E26] hover:border-[#C8A97E]/30"
+                }`}
+              >
+                <div>
+                  <span className="text-[10px] text-[#DFB982] uppercase tracking-[0.2em] font-medium block mb-2">
+                    Priority Schedule
+                  </span>
+                  <h3 className="font-serif font-normal text-xl text-[#F5EFEB] mb-2">
+                    First Available Master Barber
+                  </h3>
+                  <p className="text-xs text-[#9E9991] font-light leading-[1.8]">
+                    We will pair you with the best available craftsman at your requested time. Ideal for quick or flexible appointments.
+                  </p>
+                </div>
+                <span className="mt-6 text-[10px] text-emerald-400 uppercase tracking-wider font-semibold">
+                  ● Maximum Availability
+                </span>
+              </div>
+
+              {/* Individual Stylists */}
+              {STYLISTS.map((stylist) => {
+                const isSelected = bookingData.stylist === stylist.name;
+                return (
+                  <div
+                    key={stylist.id}
+                    onClick={() => setBookingData({ ...bookingData, stylist: stylist.name })}
+                    className={`p-8 border cursor-pointer transition-all flex flex-col justify-between ${
+                      isSelected
+                        ? "bg-[#161620] border-[#C8A97E]"
+                        : "bg-[#121217] border-[#1E1E26] hover:border-[#C8A97E]/30"
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-[10px] text-[#DFB982] uppercase tracking-[0.2em] font-medium">
+                          {stylist.role}
+                        </span>
+                        <div className="flex items-center gap-1 text-xs text-[#DFB982]">
+                          <Star size={11} className="fill-[#DFB982]" />
+                          <span className="font-mono">{stylist.rating}</span>
+                        </div>
+                      </div>
+
+                      <h3 className="font-serif font-normal text-xl text-[#F5EFEB] mb-2">
+                        {stylist.name}
+                      </h3>
+
+                      <p className="text-xs text-[#9E9991] font-light leading-[1.8] line-clamp-2">
+                        {stylist.specialization}
+                      </p>
+                    </div>
+
+                    <span className="mt-6 text-[10px] text-[#7A766F] uppercase tracking-wider font-mono">
+                      {stylist.experienceYears}+ Yrs Mastery
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Date & Time */}
+        {step === 3 && (
+          <div className="animate-in fade-in duration-300">
+            <h2 className="text-2xl font-serif font-normal text-[#F5EFEB] mb-2 flex items-center gap-3">
+              <CalendarIcon size={20} className="text-[#DFB982]" />
+              <span>Select Date & Preferred Time</span>
+            </h2>
+            <p className="text-xs text-[#9E9991] mb-8 font-light">
+              Salon Operational Hours: Mon – Fri (9 AM – 8 PM), Sat (10 AM – 9 PM), Sun (10 AM – 2 PM).
+            </p>
+
+            <div className="space-y-8">
+              {/* Date Input with Comfortable Height */}
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-[#9E9991] font-medium mb-3">
+                  Appointment Date *
+                </label>
+                <input
+                  type="date"
+                  min={new Date().toISOString().split("T")[0]}
                   value={bookingData.date}
-                  onChange={(e) => setBookingData({...bookingData, date: e.target.value})}
-                  className="w-full p-4 text-xl border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-brand-gold)]"
+                  onChange={(e) => setBookingData({ ...bookingData, date: e.target.value })}
+                  className="w-full py-4 px-5 text-base bg-[#121217] border border-[#1E1E26] text-[#F5EFEB] focus:outline-none focus:border-[#C8A97E] transition-colors"
                 />
               </div>
-            )}
 
-            {/* Step 4: Time */}
-            {step === 4 && (
-              <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-                <h2 className="text-2xl font-bold font-serif mb-6 flex items-center gap-3"><Clock className="text-[var(--color-brand-gold)]" /> Choose Time</h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {timeSlots.map((time, idx) => (
-                    <div 
-                      key={idx} 
-                      onClick={() => setBookingData({...bookingData, time})}
-                      className={`p-4 text-center rounded-xl border-2 cursor-pointer transition-all font-semibold ${
-                        bookingData.time === time ? "border-[var(--color-brand-gold)] bg-[var(--color-brand-gold)] text-black" : "border-gray-200 hover:border-[var(--color-brand-gold)]"
-                      }`}
-                    >
-                      {time}
+              {/* Time Slots */}
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-[#9E9991] font-medium mb-4">
+                  Select Time Slot *
+                </label>
+                <div className="space-y-4 sm:space-y-5">
+                  {timeSlots.map((group, gIdx) => (
+                    <div key={gIdx} className="p-4 sm:p-6 bg-[#121217] border border-[#1E1E26]">
+                      <span className="text-[10px] uppercase tracking-[0.25em] text-[#DFB982] font-semibold block mb-3 sm:mb-4">
+                        {group.period}
+                      </span>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+                        {group.slots.map((slot) => {
+                          const isSelected = bookingData.time === slot;
+                          return (
+                            <button
+                              key={slot}
+                              type="button"
+                              onClick={() => setBookingData({ ...bookingData, time: slot })}
+                              className={`py-2.5 sm:py-3 px-2 sm:px-4 text-[11px] sm:text-xs font-mono whitespace-nowrap transition-all ${
+                                isSelected
+                                  ? "bg-[#C8A97E] text-[#080809] font-bold"
+                                  : "bg-[#181820] text-[#E8DFD5] hover:bg-[#22222C]"
+                              }`}
+                            >
+                              {slot}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
-            )}
+            </div>
+          </div>
+        )}
 
-            {/* Step 5: Details */}
-            {step === 5 && (
-              <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-                <h2 className="text-2xl font-bold font-serif mb-6">Your Details</h2>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Full Name</label>
-                    <input type="text" value={bookingData.customerDetails.name} onChange={(e) => setBookingData({...bookingData, customerDetails: {...bookingData.customerDetails, name: e.target.value}})} className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[var(--color-brand-gold)] outline-none" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Phone Number</label>
-                    <input type="tel" value={bookingData.customerDetails.phone} onChange={(e) => setBookingData({...bookingData, customerDetails: {...bookingData.customerDetails, phone: e.target.value}})} className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[var(--color-brand-gold)] outline-none" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Email</label>
-                    <input type="email" value={bookingData.customerDetails.email} onChange={(e) => setBookingData({...bookingData, customerDetails: {...bookingData.customerDetails, email: e.target.value}})} className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[var(--color-brand-gold)] outline-none" />
-                  </div>
+        {/* Step 4: Particulars */}
+        {step === 4 && (
+          <div className="animate-in fade-in duration-300">
+            <h2 className="text-2xl font-serif font-normal text-[#F5EFEB] mb-2">
+              Gentleman&apos;s Particulars
+            </h2>
+            <p className="text-xs text-[#9E9991] mb-8 font-light">
+              Please provide your contact details for appointment confirmation.
+            </p>
+
+            <div className="space-y-6">
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-[#9E9991] font-medium mb-2.5">
+                  Full Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Vignesh Ramanathan"
+                  value={bookingData.customerDetails.name}
+                  onChange={(e) =>
+                    setBookingData({
+                      ...bookingData,
+                      customerDetails: { ...bookingData.customerDetails, name: e.target.value },
+                    })
+                  }
+                  className="w-full py-4 px-5 bg-[#121217] border border-[#1E1E26] text-[#F5EFEB] text-sm focus:outline-none focus:border-[#C8A97E]"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-[#9E9991] font-medium mb-2.5">
+                    Phone / WhatsApp Number *
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="e.g. 9876543210"
+                    value={bookingData.customerDetails.phone}
+                    onChange={(e) =>
+                      setBookingData({
+                        ...bookingData,
+                        customerDetails: { ...bookingData.customerDetails, phone: e.target.value },
+                      })
+                    }
+                    className="w-full py-4 px-5 bg-[#121217] border border-[#1E1E26] text-[#F5EFEB] text-sm focus:outline-none focus:border-[#C8A97E]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-[#9E9991] font-medium mb-2.5">
+                    Email Address (Optional)
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="e.g. vignesh@domain.com"
+                    value={bookingData.customerDetails.email}
+                    onChange={(e) =>
+                      setBookingData({
+                        ...bookingData,
+                        customerDetails: { ...bookingData.customerDetails, email: e.target.value },
+                      })
+                    }
+                    className="w-full py-4 px-5 bg-[#121217] border border-[#1E1E26] text-[#F5EFEB] text-sm focus:outline-none focus:border-[#C8A97E]"
+                  />
                 </div>
               </div>
-            )}
 
-            {/* Step 6: Summary */}
-            {step === 6 && (
-              <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-                <h2 className="text-2xl font-bold font-serif mb-6">Booking Summary</h2>
-                <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 space-y-4 text-lg">
-                  <div className="flex justify-between border-b pb-4">
-                    <span className="text-gray-600">Service</span>
-                    <span className="font-bold">{bookingData.service}</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-4">
-                    <span className="text-gray-600">Stylist</span>
-                    <span className="font-bold">{bookingData.stylist}</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-4">
-                    <span className="text-gray-600">Date & Time</span>
-                    <span className="font-bold">{bookingData.date} at {bookingData.time}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Name</span>
-                    <span className="font-bold">{bookingData.customerDetails.name}</span>
-                  </div>
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-[#9E9991] font-medium mb-2.5">
+                  Special Notes or Style References (Optional)
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="e.g. Skin fade with low taper, sensitive skin on neck, pre-wedding grooming..."
+                  value={bookingData.customerDetails.notes}
+                  onChange={(e) =>
+                    setBookingData({
+                      ...bookingData,
+                      customerDetails: { ...bookingData.customerDetails, notes: e.target.value },
+                    })
+                  }
+                  className="w-full py-4 px-5 bg-[#121217] border border-[#1E1E26] text-[#F5EFEB] text-sm focus:outline-none focus:border-[#C8A97E] resize-none"
+                ></textarea>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Step 5: Summary */}
+        {step === 5 && (
+          <div className="animate-in fade-in duration-300">
+            <h2 className="text-2xl font-serif font-normal text-[#F5EFEB] mb-2">
+              Appointment Summary
+            </h2>
+            <p className="text-xs text-[#9E9991] mb-8 font-light">
+              Review your appointment reservation before dispatching confirmation.
+            </p>
+
+            <div className="p-5 sm:p-7 lg:p-8 bg-[#121217] border border-[#C8A97E]/20 space-y-4 sm:space-y-5 mb-8">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#1E1E26] pb-3 sm:pb-4 gap-1 sm:gap-0">
+                <span className="text-xs text-[#9E9991] uppercase tracking-wider">Service</span>
+                <span className="font-serif text-[#DFB982] text-left sm:text-right font-medium">{bookingData.service}</span>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#1E1E26] pb-3 sm:pb-4 gap-1 sm:gap-0">
+                <span className="text-xs text-[#9E9991] uppercase tracking-wider">Master Barber</span>
+                <span className="font-serif text-[#F5EFEB]">
+                  {bookingData.stylist || "First Available Master Barber"}
+                </span>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#1E1E26] pb-3 sm:pb-4 gap-1 sm:gap-0">
+                <span className="text-xs text-[#9E9991] uppercase tracking-wider">Date & Time</span>
+                <span className="font-mono text-[#F5EFEB]">
+                  {bookingData.date} at {bookingData.time}
+                </span>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#1E1E26] pb-3 sm:pb-4 gap-1 sm:gap-0">
+                <span className="text-xs text-[#9E9991] uppercase tracking-wider">Client Name</span>
+                <span className="text-[#F5EFEB]">{bookingData.customerDetails.name}</span>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-0">
+                <span className="text-xs text-[#9E9991] uppercase tracking-wider">Phone</span>
+                <span className="font-mono text-[#DFB982]">{bookingData.customerDetails.phone}</span>
+              </div>
+            </div>
+
+            <div className="p-6 bg-[#16161D] border border-[#1E1E26] flex items-center gap-4 text-xs text-[#9E9991] leading-[1.8]">
+              <ShieldCheck size={22} className="text-emerald-400 shrink-0" />
+              <span>
+                Your booking details will be registered directly in our atelier system and forwarded to our official WhatsApp (+91 63984 74536) for immediate concierge confirmation.
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Step 6: Confirmation State */}
+        {step === 6 && (
+          <div className="py-12 text-center animate-in zoom-in duration-500">
+            <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mx-auto mb-8">
+              <CheckCircle2 size={32} />
+            </div>
+
+            <span className="text-[10px] uppercase tracking-[0.3em] font-medium text-[#DFB982] block mb-3">
+              Reservation Dispatched
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-serif font-normal text-[#F5EFEB] mb-4">
+              Thank You, {bookingData.customerDetails.name}
+            </h2>
+            <p className="text-sm text-[#9E9991] max-w-md mx-auto mb-8 leading-[1.8] font-light">
+              Your appointment request for <strong className="text-[#DFB982]">{bookingData.service}</strong> on{" "}
+              <strong className="text-[#F5EFEB]">{bookingData.date} at {bookingData.time}</strong> has been transmitted to WhatsApp.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
+              <a
+                href={whatsappShareUrl || `https://wa.me/${SALON_INFO.whatsappNumber}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs uppercase tracking-[0.2em] transition-colors"
+              >
+                <MessageCircle size={15} />
+                <span>Open WhatsApp Chat</span>
+              </a>
+
+              <button
+                onClick={() => (window.location.href = "/")}
+                className="w-full sm:w-auto px-8 py-4 border border-[#C8A97E]/30 text-[#DFB982] text-xs font-semibold uppercase tracking-[0.2em] hover:border-[#DFB982] transition-colors"
+              >
+                Return to Home
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Navigation Actions */}
+        {step < 6 && (
+          <div className="mt-12 pt-8 border-t border-[#1C1C24] flex items-center justify-between">
+            <button
+              onClick={handlePrev}
+              disabled={step === 1}
+              className={`flex items-center gap-2 px-6 py-3 text-xs font-medium uppercase tracking-[0.18em] transition-colors ${
+                step === 1
+                  ? "opacity-0 cursor-default pointer-events-none"
+                  : "text-[#9E9991] hover:text-[#F5EFEB]"
+              }`}
+            >
+              <ChevronLeft size={16} />
+              <span>Back</span>
+            </button>
+
+            {step < 5 ? (
+              <button
+                onClick={handleNext}
+                disabled={
+                  (step === 1 && !bookingData.service) ||
+                  (step === 3 && (!bookingData.date || !bookingData.time)) ||
+                  (step === 4 && (!bookingData.customerDetails.name || !bookingData.customerDetails.phone))
+                }
+                className="flex items-center gap-2 px-8 py-3.5 bg-[#C8A97E] hover:bg-[#DFB982] text-[#080809] font-semibold text-xs uppercase tracking-[0.2em] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <span>Continue</span>
+                <ChevronRight size={16} />
+              </button>
+            ) : (
+              <button
+                onClick={confirmBooking}
+                disabled={isSubmitting}
+                className="flex items-center gap-2 px-9 py-4 bg-[#C8A97E] hover:bg-[#DFB982] text-[#080809] font-bold text-xs uppercase tracking-[0.22em] transition-colors"
+              >
+                <CalendarIcon size={14} />
+                <span>{isSubmitting ? "Confirming..." : "Confirm & Send to WhatsApp"}</span>
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Luxury Confirmation Modal Popup */}
+      <AnimatePresence>
+        {showConfirmationPopup && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/85 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 20 }}
+              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              className="bg-[#101015] border border-[#C8A97E]/30 w-full max-w-lg p-6 sm:p-10 shadow-[0_24px_64px_rgba(0,0,0,0.9)] text-center relative"
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => setShowConfirmationPopup(false)}
+                className="absolute top-4 right-4 sm:top-5 sm:right-5 p-2 text-[#7A766F] hover:text-[#F5EFEB] transition-colors"
+                aria-label="Close confirmation popup"
+              >
+                <X size={20} />
+              </button>
+
+              {/* Glowing Emerald Checkmark */}
+              <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mx-auto mb-6 shadow-[0_0_24px_rgba(16,185,129,0.25)]">
+                <CheckCircle2 size={32} />
+              </div>
+
+              <span className="text-[10px] uppercase tracking-[0.3em] font-medium text-[#DFB982] block mb-2">
+                Reservation Dispatched
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-serif font-normal text-[#F5EFEB] mb-3">
+                Thank You, {bookingData.customerDetails.name}
+              </h2>
+              <p className="text-xs sm:text-sm text-[#9E9991] max-w-md mx-auto mb-6 leading-[1.8] font-light">
+                Your appointment request for <strong className="text-[#DFB982]">{bookingData.service}</strong> on{" "}
+                <strong className="text-[#F5EFEB]">{bookingData.date} at {bookingData.time}</strong> has been transmitted to WhatsApp.
+              </p>
+
+              {/* Booking Summary Box */}
+              <div className="bg-[#16161D] border border-[#1E1E26] p-4 sm:p-5 mb-8 text-left space-y-2.5 text-xs">
+                <div className="flex justify-between items-center pb-2 border-b border-[#23232E]">
+                  <span className="text-[#7A766F] uppercase tracking-wider text-[10px]">Barber</span>
+                  <span className="text-[#F5EFEB] font-medium">{bookingData.stylist || "First Available Master Barber"}</span>
+                </div>
+                <div className="flex justify-between items-center pb-2 border-b border-[#23232E]">
+                  <span className="text-[#7A766F] uppercase tracking-wider text-[10px]">Client Phone</span>
+                  <span className="text-[#DFB982] font-mono">{bookingData.customerDetails.phone}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[#7A766F] uppercase tracking-wider text-[10px]">Concierge Status</span>
+                  <span className="text-emerald-400 flex items-center gap-1.5 font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Dispatched to WhatsApp
+                  </span>
                 </div>
               </div>
-            )}
 
-            {/* Step 7: Success */}
-            {step === 7 && (
-              <div className="text-center py-10 animate-in zoom-in duration-500">
-                <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <CheckCircle2 className="text-green-500 w-12 h-12" />
-                </div>
-                <h2 className="text-4xl font-bold font-serif mb-4">Booking Confirmed!</h2>
-                <p className="text-gray-600 mb-8 text-lg">Thank you, {bookingData.customerDetails.name}. Your appointment is booked for {bookingData.date} at {bookingData.time}.</p>
-                <button onClick={() => window.location.href = '/'} className="px-8 py-4 bg-black text-white font-bold rounded-full hover:bg-[var(--color-brand-gold)] hover:text-black transition-colors">
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5">
+                <a
+                  href={whatsappShareUrl || `https://wa.me/${SALON_INFO.whatsappNumber}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs uppercase tracking-[0.2em] transition-colors"
+                >
+                  <MessageCircle size={15} />
+                  <span>Open WhatsApp Chat</span>
+                </a>
+
+                <button
+                  onClick={() => (window.location.href = "/")}
+                  className="w-full sm:w-auto px-6 py-3.5 border border-[#C8A97E]/30 text-[#DFB982] text-xs font-semibold uppercase tracking-[0.2em] hover:border-[#DFB982] hover:bg-[#C8A97E]/10 transition-colors"
+                >
                   Return to Home
                 </button>
               </div>
-            )}
-
-            {/* Navigation Buttons */}
-            {step < 7 && (
-              <div className="mt-10 pt-6 border-t border-gray-100 flex justify-between">
-                <button 
-                  onClick={handlePrev} 
-                  disabled={step === 1}
-                  className={`px-6 py-3 font-semibold rounded-lg transition-colors ${step === 1 ? "opacity-0 cursor-default" : "bg-gray-100 text-black hover:bg-gray-200"}`}
-                >
-                  Back
-                </button>
-                
-                {step < 6 ? (
-                  <button 
-                    onClick={handleNext}
-                    disabled={
-                      (step === 1 && !bookingData.service) ||
-                      (step === 2 && !bookingData.stylist) ||
-                      (step === 3 && !bookingData.date) ||
-                      (step === 4 && !bookingData.time) ||
-                      (step === 5 && (!bookingData.customerDetails.name || !bookingData.customerDetails.phone))
-                    }
-                    className="flex items-center gap-2 px-8 py-3 bg-black text-white font-semibold rounded-lg hover:bg-[var(--color-brand-gold)] hover:text-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Next <ChevronRight size={18} />
-                  </button>
-                ) : (
-                  <button 
-                    onClick={confirmBooking}
-                    className="px-8 py-3 bg-[var(--color-brand-gold)] text-black font-bold rounded-lg hover:bg-yellow-500 transition-colors uppercase tracking-wider"
-                  >
-                    Confirm Appointment
-                  </button>
-                )}
-              </div>
-            )}
+            </motion.div>
           </div>
-        </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+export default function BookPage() {
+  return (
+    <>
+      <Navbar />
+      <main className="pt-36 md:pt-44 pb-32 min-h-screen bg-[#080809] text-[#F5EFEB]">
+        <Suspense fallback={<div className="text-center py-20 text-[#DFB982] text-xs uppercase tracking-widest">Loading Concierge...</div>}>
+          <BookingContent />
+        </Suspense>
       </main>
       <Footer />
     </>
